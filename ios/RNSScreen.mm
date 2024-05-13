@@ -105,6 +105,11 @@ namespace react = facebook::react;
 
 - (void)updateBounds
 {
+  [self updateBounds:self.bounds.size];
+}
+
+- (void)updateBounds:(CGSize)boundsSize
+{
 #ifdef RCT_NEW_ARCH_ENABLED
   if (_state != nullptr) {
     RNSScreenStackHeaderConfig *config = [self findHeaderConfig];
@@ -112,13 +117,13 @@ namespace react = facebook::react;
     CGFloat headerHeight =
         config.largeTitle ? 0 : [_controller calculateHeaderHeightIsModal:self.isPresentedAsNativeModal];
     auto newState =
-        react::RNSScreenState{RCTSizeFromCGSize(self.bounds.size), RCTPointFromCGPoint(CGPointMake(0, headerHeight))};
+        react::RNSScreenState{RCTSizeFromCGSize(boundsSize), RCTPointFromCGPoint(CGPointMake(0, headerHeight))};
     _state->updateState(std::move(newState));
     UINavigationController *navctr = _controller.navigationController;
     [navctr.view setNeedsLayout];
   }
 #else
-  [_bridge.uiManager setSize:self.bounds.size forView:self];
+  [_bridge.uiManager setSize:boundsSize forView:self];
 #endif
 }
 
@@ -782,11 +787,19 @@ namespace react = facebook::react;
 - (void)updateLayoutMetrics:(const react::LayoutMetrics &)layoutMetrics
            oldLayoutMetrics:(const react::LayoutMetrics &)oldLayoutMetrics
 {
-  _newLayoutMetrics = layoutMetrics;
+  auto frame = layoutMetrics.frame;
+  auto origin = frame.origin;
+  auto size = frame.size;
+  CGRect rect = CGRectMake(origin.x, origin.y, size.width, size.height);
+  auto fixedFrame = [self fixFrame:rect];
+  react::LayoutMetrics fixedMetrics = layoutMetrics;
+  fixedMetrics.frame = RCTRectFromCGRect(fixedFrame);
+
+  _newLayoutMetrics = fixedMetrics;
   _oldLayoutMetrics = oldLayoutMetrics;
   UIViewController *parentVC = self.reactViewController.parentViewController;
   if (parentVC != nil && ![parentVC isKindOfClass:[RNSNavigationController class]]) {
-    [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
+    [super updateLayoutMetrics:fixedMetrics oldLayoutMetrics:oldLayoutMetrics];
   }
   // when screen is mounted under RNSNavigationController it's size is controller
   // by the navigation controller itself. That is, it is set to fill space of
@@ -824,6 +837,7 @@ namespace react = facebook::react;
 
 - (void)reactSetFrame:(CGRect)frame
 {
+  frame = [self fixFrame:frame];
   _reactFrame = frame;
   UIViewController *parentVC = self.reactViewController.parentViewController;
   if (parentVC != nil && ![parentVC isKindOfClass:[RNSNavigationController class]]) {
@@ -842,6 +856,32 @@ namespace react = facebook::react;
   _controller = nil;
 }
 #endif
+
+- (void)setFrame:(CGRect)frame
+{
+  NSLog(@"setFrame %@ %p %ld", NSStringFromCGRect(frame), self, (long)self.tag);
+  [super setFrame:frame];
+  [self updateBounds:frame.size];
+}
+
+- (CGRect)fixFrame:(CGRect)frame
+{
+  NSLog(@"fixFrame %@ %p %ld", NSStringFromCGRect(frame), self, (long)self.tag);
+
+  CGSize screenSize = UIScreen.mainScreen.bounds.size;
+  CGPoint origin = frame.origin;
+  CGSize size = frame.size;
+  if (origin.x == screenSize.width - size.width && origin.y == 0) {
+    origin.x = 0;
+  }
+  if (origin.x > 0 && origin.y == size.height) {
+    origin.y = 0;
+  }
+  frame.origin = origin;
+
+  NSLog(@"fixFrame2 %@ %p %ld", NSStringFromCGRect(frame), self, (long)self.tag);
+  return frame;
+}
 
 @end
 

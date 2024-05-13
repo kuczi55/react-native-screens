@@ -7,35 +7,51 @@ import {
   createNativeStackNavigator,
 } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-// import {createStackNavigator} from '@react-navigation/stack';
+import { InnerScreen } from 'react-native-screens/src/components/Screen';
+import { ScreenSplit } from 'react-native-screens';
+
+export default function SplitNavigation() {
+  return (
+    <ScreenSplit>
+      <InnerScreen>
+        <Text style={{ height: '100%', backgroundColor: 'red' }}>
+          Go to `TabNavigator` and then go to second tab there. Spot the
+          difference between dismissing modal with a swipe and with a `Pop to top`
+          button.
+        </Text>
+      </InnerScreen>
+      <InnerScreen>
+        <NativeNavigation />
+      </InnerScreen>
+    </ScreenSplit>
+  );
+}
 
 const Stack = createNativeStackNavigator();
 
-export default function NativeNavigation() {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          presentation: 'modal',
-        }}>
-        <Stack.Screen
-          name="Home"
-          component={Home}
-          options={{
-            orientation: 'portrait_up',
-          }}
-        />
-        <Stack.Screen
-          name="NestedNavigator"
-          component={NestedNavigator}
-          options={{
-            orientation: 'landscape_right',
-          }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-}
+const NativeNavigation = () => (
+  <NavigationContainer>
+    <Stack.Navigator
+      screenOptions={{
+        presentation: 'modal',
+      }}>
+      <Stack.Screen
+        name="Home"
+        component={Home}
+        options={{
+          orientation: 'portrait_up',
+        }}
+      />
+      <Stack.Screen
+        name="NestedNavigator"
+        component={NestedNavigator}
+        options={{
+          orientation: 'landscape_right',
+        }}
+      />
+    </Stack.Navigator>
+  </NavigationContainer>
+);
 
 // change to createStackNavigator to test with stack in the middle
 const Tab = createBottomTabNavigator();
